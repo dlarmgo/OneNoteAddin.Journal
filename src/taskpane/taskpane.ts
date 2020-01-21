@@ -6,66 +6,125 @@
 /* global document, Office */
 
 Office.onReady(info => {
-  if (info.host === Office.HostType.OneNote) {
-    document.getElementById("sideload-msg").style.display = "none";
-    document.getElementById("app-body").style.display = "flex";
-    document.getElementById("run").onclick = run;
-  }
+    if (info.host === Office.HostType.OneNote) {
+        document.getElementById("sideload-msg").style.display = "none";
+        document.getElementById("app-body").style.display = "flex";
+        document.getElementById("run").onclick = run;
+    }
 });
 
-export async function run() {
-  /**
-   * Insert your OneNote code here
-   */
-  try {
-    await OneNote.run(async context => {
-      var page = context.application.getActivePage();
-      //var html = "<p><ol><li>Item #1</li><li>Item #4</li></ol></p>";
-      //var mainTable = new OneNote.Table();
-      var pageContents = page.contents;
-      var mainTableParagraph ;
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+function logTableCell(context: OneNote.RequestContext, cell: OneNote.TableCell) {
 
-      context.load(pageContents);
-      context.sync().then(
-        function() {
-          var items = pageContents.items;
-          items.map(
-            function(el) {
-              if (el.type == "Outline") {
-                //console.log("El: " + el.type);
-                var pG = el.outline.paragraphs;
-                context.load(pG);
-                //pG.load('type');
-                var newNote = "<b>Z</b>";
-                context.sync().then(function() {
-                  var item = pG.getItemAt(0);
-                  item.load('type');
-                  context.sync().then(function(){
-                    console.log("Found something! " + item.type);
-                    if (item.type == "Table") {
-                      var mainTable = item.table;
-                      mainTable.insertRow(0, ["<b>AAA</b>"]);
-                      return context.sync();
-                    } else {
-                      console.log("found new note!" + item.type + " - " + item.richText.getHtml());
-                      newNote = newNote + item.toJSON();
+}
+function logParagraph(context: OneNote.RequestContext, pg: OneNote.Paragraph) {
+
+}
+
+
+export async function run() {
+    try {
+        await OneNote.run(async ctx => {
+            var rtHTML;
+            var activePage = ctx.application.getActivePage();
+            var pageContents = activePage.contents;
+            pageContents.load('count');
+            await ctx.sync();
+            console.log("pageContents count: " + pageContents.count);
+
+            ctx.load(pageContents);
+            await ctx.sync();
+            pageContents.load('items');
+            await ctx.sync();
+            var pageContentsItems = pageContents.items;
+            for (var i = 0; i < pageContentsItems.length; i++) {
+                if (pageContentsItems[i].type == "Outline") {
+                    console.log("Outline found. ID: " + pageContentsItems[i].id);
+                    var paragraphs = pageContentsItems[i].outline.paragraphs;
+                    ctx.load(paragraphs);
+                    await ctx.sync();
+                    var pgArray = paragraphs.items;
+                    for (var i_pg = 0; i_pg < pgArray.length; i_pg++) {
+                        if (pgArray[i_pg].type == "Table") {
+                            console.log("In table...");
+                            var table = pgArray[i_pg].table;
+                            ctx.load(table);
+                            await ctx.sync();
+                            var tableRows = table.rows;
+                            ctx.load(tableRows);
+                            await ctx.sync();
+                            console.log("Rows in table: " + tableRows.count);
+                            console.log("");
+                            for (var i_row = 0; i_row < tableRows.count; i_row++) {
+                                var row = tableRows.items[i_row];
+                                ctx.load(row);
+                                await ctx.sync();
+                                console.log("cellInRow: " + row.id + "::: " + row.cellCount);
+                                var cellArray = row.cells;
+                                ctx.load(cellArray);
+                                await ctx.sync();
+                                console.log("cellArray: " + cellArray.count);
+                                for (var cellInRow = 0; cellInRow < cellArray.count; cellInRow++) {
+                                    var endCell = cellArray.getItem(0);
+                                    ctx.load(endCell);
+                                    await ctx.sync();
+                                    console.log("EndCell id: " + endCell.id);
+
+                                    var paragraphsInCell = endCell.paragraphs;
+                                    ctx.load(paragraphsInCell);
+                                    await ctx.sync();
+                                    console.log("EndCell Paragraphs count: " + paragraphsInCell.count);
+                                    for (var i_paragraphsInCell = 0; i_paragraphsInCell < paragraphsInCell.count; i_paragraphsInCell++) {
+                                        var itemsInCell = paragraphsInCell.items;
+
+                                        console.log("paragraph type: " + itemsInCell[i_paragraphsInCell].type);
+
+
+                                        var RichTextInParagraphInCell = itemsInCell[i_paragraphsInCell].richText;
+                                        ctx.load(RichTextInParagraphInCell);
+                                        await ctx.sync();
+                                        var cellRT = RichTextInParagraphInCell.getHtml();
+                                        RichTextInParagraphInCell.
+                                        await ctx.sync();
+                                        console.log("Text in cell: " + RichTextInParagraphInCell.text + ":::" + cellRT);
+
+                                        var ParagraphInCell = itemsInCell[i_paragraphsInCell].outline;
+                                        ctx.load(ParagraphInCell);
+                                        await ctx.sync();
+                                        console.log("Paragraph in cell: " + ParagraphInCell.id );
+
+                                    }
+                                }
+
+                            }
+                            console.log("row end");
+
+
+                            console.log("Table end.");
+                        }
+                        if (pgArray[i_pg].type !== "RichText") {
+                            console.log("Pg without RichText");
+                            continue;
+                        }
+                        console.log("Pg found.");
+                        ctx.load(pgArray[i_pg]);
+                        await ctx.sync();
+                        rtHTML = pgArray[i_pg].richText.getHtml();
+                        console.log("pg getting html");
+                        await ctx.sync();
+                        console.log("RichText HTML: " + rtHTML.value);
+                        console.log("Pg end.");
                     }
-                  });
-                });
-                console.log("new note: " + newNote);
-              }
+                }
+
             }
-          );
-        }
-      );
-      //console.log(page.contents.items.forEach(a => {return a;}));
-      //console.log("AA: " + mainTableParagraph.type);
-      
-      //page.addOutline(40, 90 + 50, html);
-      return context.sync();
-    })
-  } catch (error) {
-    console.log("Error" + error);
-  }
+            console.log("123456789");
+            return ctx.sync();
+        });
+    } catch (error) {
+        console.log("Error" + error);
+    }
 
 }
