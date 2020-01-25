@@ -9,7 +9,7 @@ Office.onReady(info => {
     if (info.host === Office.HostType.OneNote) {
         document.getElementById("sideload-msg").style.display = "none";
         document.getElementById("app-body").style.display = "flex";
-        document.getElementById("run").onclick = run;
+        document.getElementById("run").onclick = run2;
     }
 });
 
@@ -21,6 +21,78 @@ function logTableCell(context: OneNote.RequestContext, cell: OneNote.TableCell) 
 }
 function logParagraph(context: OneNote.RequestContext, pg: OneNote.Paragraph) {
 
+}
+
+export async function run2() {
+    try {
+        await OneNote.run(async ctx => {
+            console.log("HI");
+            var pageContents = ctx.application.getActivePage().contents;
+            ctx.load(pageContents);
+            await ctx.sync();
+            console.log("Contents number: " + pageContents.count);
+            var pageItems = pageContents.items;
+            for (var i = 0; i < pageContents.count; i++) {
+                var pageItem = pageContents.items[i];
+                ctx.load(pageItem);
+                await ctx.sync();
+                if (pageItem.type == "Outline") {
+                    var outline = pageItem.outline;
+                    ctx.load(outline);
+                    await ctx.sync();
+                    var paragraphs = outline.paragraphs;
+                    ctx.load(paragraphs);
+                    await ctx.sync();
+                    //var newParagraph = paragraphs.getItemAt(0);
+                    //paragraphs.items.push(newParagraph);
+                    for (var i_paragraph = 0; i_paragraph < paragraphs.count; i_paragraph++) {
+                        var item = paragraphs.items[i_paragraph];
+                        ctx.load(item);
+                        await ctx.sync();
+                        console.log("i_paragraphs: " + i_paragraph + " type: " + item.type);
+                        if (item.type == "RichText") {
+                            var rt = item.richText;
+                            ctx.load(rt);
+                            await ctx.sync();
+                            var text = rt.text;
+                            console.log("RichText text: " + text);
+                            text = text + " Addded .";
+                            console.log("RichText text: " + text);
+                            pageItem.load('outline,outline/id,outline/paragraphs,outline/paragraphs/items,outline/paragraphs/items/richText,outline/paragraphs/items/richText/text')
+                            await ctx.sync();
+                            var date = new Date().toLocaleTimeString().slice(0, -3);
+                            item.insertHtmlAsSibling(OneNote.InsertLocation.before, date + ":<b>\tAAA</b>" );
+
+
+
+                            console.log("VALUE: " + pageItem.outline.paragraphs.items[0].richText.text);
+                            var txt = pageItem.outline.paragraphs.items[0].richText.text;
+                            txt += "asasa";
+                            var html = rt.getHtml(); 
+                            await ctx.sync();
+                            console.log("VALUE: " + pageItem.outline.paragraphs.items[0].richText.text);
+                            //console.log("pageItem length: " + pageItem.outline.paragraphs.getItemAt(0).richText.text);
+                            ctx.sync();
+                        }
+                        //item.delete();
+                        //paragraphs.items.pop();
+                        //console.log("count: " + paragraphs.count);
+                        //pageItem.set(pageItem);
+                        //await ctx.sync();
+
+
+                    }
+
+                    //console.log(outline.id);
+                }
+
+            }
+
+
+        });
+    } catch (error) {
+        console.log("Error" + error);
+    }
 }
 
 
@@ -76,6 +148,29 @@ export async function run() {
                                     ctx.load(paragraphsInCell);
                                     await ctx.sync();
                                     console.log("EndCell Paragraphs count: " + paragraphsInCell.count);
+
+                                    if (i_row == 0 && cellInRow  == 0) {
+                                        for (var it = 0; it < pgArray.length; it++) {
+                                            console.log("**************************************************************");
+                                            console.log("** before " + paragraphsInCell.count);
+                                            var copyItem = pgArray[it];
+                                            ctx.load(copyItem);
+                                            await ctx.sync();
+                                            if (copyItem.type == "RichText") {
+                                            console.log("** items length before " + paragraphsInCell.items.length);
+                                                paragraphsInCell.items.unshift(copyItem);
+                                                //ctx.load(paragraphsInCell);
+                                                endCell.set(endCell);
+                                                await ctx.sync();
+                                            console.log("** items length after " + paragraphsInCell.items.length);
+
+
+                                            }
+                                            console.log("** after " + paragraphsInCell.count);
+                                        }
+
+                                    }
+
                                     for (var i_paragraphsInCell = 0; i_paragraphsInCell < paragraphsInCell.count; i_paragraphsInCell++) {
                                         var itemsInCell = paragraphsInCell.items;
 
@@ -86,7 +181,6 @@ export async function run() {
                                         ctx.load(RichTextInParagraphInCell);
                                         await ctx.sync();
                                         var cellRT = RichTextInParagraphInCell.getHtml();
-                                        RichTextInParagraphInCell.
                                         await ctx.sync();
                                         console.log("Text in cell: " + RichTextInParagraphInCell.text + ":::" + cellRT);
 
