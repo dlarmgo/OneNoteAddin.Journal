@@ -16,11 +16,138 @@ Office.onReady(info => {
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
-function logTableCell(context: OneNote.RequestContext, cell: OneNote.TableCell) {
-
-}
 function logParagraph(context: OneNote.RequestContext, pg: OneNote.Paragraph) {
 
+}
+
+async function addLogToParagraph(context: OneNote.RequestContext, pg: OneNote.Paragraph, txt: string) {
+    console.log("Adding text! " + txt);
+    var time = new Date().toLocaleTimeString();
+    var day = new Date().toDateString();
+    var date = new Date().toLocaleDateString();
+
+    var _text: string;
+    context.load(pg);
+    await context.sync();
+    if (pg.type == "RichText") {
+        var richText = pg.richText;
+        context.load(richText);
+        await context.sync();
+        _text = richText.text;
+    }
+    pg.insertHtmlAsSibling("Before", "UUU");
+
+    var dayVals = day.split(" ");
+    var dayStr = dayVals[2] + " " + dayVals[1] + ", " + dayVals[0];
+
+    if (dayStr != _text) {
+        pg.insertHtmlAsSibling(OneNote.InsertLocation.before, "<b>" + dayStr + "</b>" );
+        pg.insertHtmlAsSibling(OneNote.InsertLocation.before, "&emsp;<sup><i>" + time + "</i></sup>: <b>" + txt + "</b>" );
+    } else {
+        pg.insertHtmlAsSibling(OneNote.InsertLocation.after, "&emsp;<sup><i>" + time + "</i></sup>: <b>" + txt + "</b>" );
+    }
+    await context.sync();
+}
+
+
+async function addLogToCell(context: OneNote.RequestContext, cell: OneNote.TableCell, txt: string) {
+    var time = new Date().toLocaleTimeString();
+    var day = new Date().toDateString();
+    var date = new Date().toLocaleDateString();
+    var richText;
+    var cellParagraphs = cell.paragraphs;
+    context.load(cellParagraphs);
+    await context.sync();
+    var pg = cellParagraphs.items[0];
+    context.load(pg);
+    await context.sync();
+    pg.insertRichTextAsSibling("Before", "ZZZ");
+    await context.sync();
+}
+
+
+async function addLogToTable(context: OneNote.RequestContext, table: OneNote.Table, txt: string) {
+    var time = new Date().toLocaleTimeString();
+    var day = new Date().toDateString();
+    var date = new Date().toLocaleDateString();
+
+    var dayVals = day.split(" ");
+    var dayStr = dayVals[2] + " " + dayVals[1] + ", " + dayVals[0];
+
+    context.load(table);
+    await context.sync();
+    
+    var rows = table.rows;
+    context.load(rows);
+    await context.sync();
+
+
+
+    var firstRow = rows.items[0];
+    context.load(firstRow);
+    await context.sync();
+
+    var cells = firstRow.cells;
+    context.load(cells);
+    await context.sync();
+
+    var cell = cells.items[0];
+    context.load(cell);
+    await context.sync();
+
+    var cellPgs = cell.paragraphs;
+    context.load(cellPgs);
+    await context.sync();
+
+    var cellPg = cellPgs.items[0]; 
+    context.load(cellPg);
+    await context.sync();
+    
+    if (cellPg.type == "RichText") {
+        var cellRt = cellPg.richText;
+        context.load(cellRt);
+        await context.sync();
+
+        console.log("cellRt.text: " + cellRt.text);
+ 
+        if (dayStr != cellRt.text) {
+        console.log("cellRt.text new date: " + cellRt.text);
+            table.insertRow(0, [""]);
+            await context.sync();
+            context.load(table);
+            await context.sync();
+
+            var newRows = table.rows;
+            context.load(newRows);
+            await context.sync();
+
+            var newRow = newRows.items[0];
+            context.load(newRow);
+            await context.sync();
+
+            var newCells = newRow.cells;
+            context.load(newCells);
+            await context.sync();
+
+            var newCell = newCells.items[0];
+            context.load(newCell);
+            await context.sync();
+
+            var newCellPgs = newCell.paragraphs;
+            context.load(newCellPgs);
+            await context.sync();
+
+            var newCellPg = newCellPgs.items[0]; 
+            context.load(newCellPg);
+            await context.sync();
+
+            newCellPg.insertHtmlAsSibling(OneNote.InsertLocation.before, "<b>" + dayStr + "</b>" );
+            newCellPg.insertHtmlAsSibling(OneNote.InsertLocation.before, "&emsp;<sup><i>" + time + "</i></sup>: <b>" + txt + "</b>" );
+        } else {
+        console.log("cellRt.text same date: " + cellRt.text);
+            cellPg.insertHtmlAsSibling(OneNote.InsertLocation.after, "&emsp;<sup><i>" + time + "</i></sup>: <b>" + txt + "</b>" );
+        }
+    }
 }
 
 export async function run2() {
@@ -43,50 +170,57 @@ export async function run2() {
                     var paragraphs = outline.paragraphs;
                     ctx.load(paragraphs);
                     await ctx.sync();
-                    //var newParagraph = paragraphs.getItemAt(0);
-                    //paragraphs.items.push(newParagraph);
-                    for (var i_paragraph = 0; i_paragraph < paragraphs.count; i_paragraph++) {
-                        var item = paragraphs.items[i_paragraph];
-                        ctx.load(item);
+                    var item = paragraphs.items[0];
+                    ctx.load(item);
+                    await ctx.sync();
+                    if (item.type == "RichText") {
+                        var rt = item.richText;
+                        ctx.load(rt);
                         await ctx.sync();
-                        console.log("i_paragraphs: " + i_paragraph + " type: " + item.type);
-                        if (item.type == "RichText") {
-                            var rt = item.richText;
-                            ctx.load(rt);
-                            await ctx.sync();
-                            var text = rt.text;
-                            console.log("RichText text: " + text);
-                            text = text + " Addded .";
-                            console.log("RichText text: " + text);
-                            pageItem.load('outline,outline/id,outline/paragraphs,outline/paragraphs/items,outline/paragraphs/items/richText,outline/paragraphs/items/richText/text')
-                            await ctx.sync();
-                            var date = new Date().toLocaleTimeString().slice(0, -3);
-                            item.insertHtmlAsSibling(OneNote.InsertLocation.before, date + ":<b>\tAAA</b>" );
+                        var text = rt.text;
+                        console.log("RichText text: " + text);
+                        text = text + " Addded .";
+                        console.log("RichText text: " + text);
+                        pageItem.load('outline,outline/id,outline/paragraphs,outline/paragraphs/items,outline/paragraphs/items/richText,outline/paragraphs/items/richText/text')
+                        await ctx.sync();
 
+                        //addLogToParagraph(ctx, item, "AAA");
 
-
-                            console.log("VALUE: " + pageItem.outline.paragraphs.items[0].richText.text);
-                            var txt = pageItem.outline.paragraphs.items[0].richText.text;
-                            txt += "asasa";
-                            var html = rt.getHtml(); 
-                            await ctx.sync();
-                            console.log("VALUE: " + pageItem.outline.paragraphs.items[0].richText.text);
-                            //console.log("pageItem length: " + pageItem.outline.paragraphs.getItemAt(0).richText.text);
-                            ctx.sync();
-                        }
-                        //item.delete();
-                        //paragraphs.items.pop();
-                        //console.log("count: " + paragraphs.count);
-                        //pageItem.set(pageItem);
-                        //await ctx.sync();
-
-
+                        console.log("VALUE: " + pageItem.outline.paragraphs.items[0].richText.text);
+                        var txt = pageItem.outline.paragraphs.items[0].richText.text;
+                        txt += "asasa";
+                        var html = rt.getHtml(); 
+                        await ctx.sync();
+                        console.log("VALUE: " + pageItem.outline.paragraphs.items[0].richText.text);
+                        //console.log("pageItem length: " + pageItem.outline.paragraphs.getItemAt(0).richText.text);
                     }
-
-                    //console.log(outline.id);
                 }
-
             }
+
+            ctx.load(pageContents);
+            await ctx.sync();
+            var historyTable: OneNote.Table;
+            for (var i = 0; i < pageContents.items.length; i++) {
+                if (pageContents.items[i].type == "Outline") {
+                    var outline = pageContents.items[i].outline;
+                    ctx.load(outline);
+                    await ctx.sync();
+                    var paragraphs = outline.paragraphs;
+                    ctx.load(paragraphs);
+                    await ctx.sync();
+                    if (paragraphs.items[0].type == "Table") {
+                        historyTable = paragraphs.items[0].table;
+                        break;
+                    }
+                }
+            }
+
+            ctx.load(historyTable);
+            await ctx.sync();
+            console.log("Table found! " + historyTable.id);
+
+            await addLogToTable(ctx, historyTable, "ZZZ");
+
 
 
         });
