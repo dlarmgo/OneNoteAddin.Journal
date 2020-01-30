@@ -80,8 +80,7 @@ async function addLogToTable(context: OneNote.RequestContext, table: OneNote.Tab
     var rows = table.rows;
     context.load(rows);
     await context.sync();
-
-
+    console.log("Rows number: " + rows.count);
 
     var firstRow = rows.items[0];
     context.load(firstRow);
@@ -111,19 +110,7 @@ async function addLogToTable(context: OneNote.RequestContext, table: OneNote.Tab
         console.log("cellRt.text: " + cellRt.text);
  
         if (dayStr != cellRt.text) {
-        console.log("cellRt.text new date: " + cellRt.text);
-            table.insertRow(0, [""]);
-            await context.sync();
-            context.load(table);
-            await context.sync();
-
-            var newRows = table.rows;
-            context.load(newRows);
-            await context.sync();
-
-            var newRow = newRows.items[0];
-            context.load(newRow);
-            await context.sync();
+            var newRow = table.insertRow(0, ["x"]);
 
             var newCells = newRow.cells;
             context.load(newCells);
